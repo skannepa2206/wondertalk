@@ -2193,7 +2193,7 @@ with main:
             st.session_state.prompt = st.session_state.pending_prompt
             st.session_state.pending_prompt = ""
 
-        input_col, mic_col, send_col = st.columns([7, 1.5, 1.5])
+        input_col, send_col = st.columns([7.5, 2.5])
         with input_col:
             st.text_area(
                 "Your question",
@@ -2202,7 +2202,11 @@ with main:
                 label_visibility="collapsed",
                 placeholder="Ask anything...",
             )
-        with mic_col:
+        with send_col:
+            send_clicked = st.button("Send", type="primary", use_container_width=True)
+
+        mic_row = st.columns([7.5, 2.5])
+        with mic_row[0]:
             if browser_mic_ready:
                 st.markdown('<div class="mic-recorder">', unsafe_allow_html=True)
                 mic_kwargs = dict(
@@ -2236,8 +2240,8 @@ with main:
             else:
                 if st.button("Use Mic", use_container_width=True, disabled=not mic_ready):
                     recognize_speech()
-        with send_col:
-            send_clicked = st.button("Send", type="primary", use_container_width=True)
+        with mic_row[1]:
+            st.markdown("", unsafe_allow_html=True)
 
         components.html(
             """
