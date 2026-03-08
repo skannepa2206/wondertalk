@@ -1363,6 +1363,8 @@ css = Template(
 
     div[data-testid="stMicrophoneRecorder"] {
         width: 100% !important;
+        display: flex;
+        align-items: stretch;
     }
 
     div[data-testid="stMicrophoneRecorder"] iframe {
@@ -1507,6 +1509,12 @@ css = Template(
         color: var(--accent-text) !important;
         border: none;
         box-shadow: 0 12px 28px var(--shadow-strong);
+        border-radius: 10px !important;
+        min-height: 44px;
+        padding: 0.55rem 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     button[kind="primary"]:hover {
@@ -2268,9 +2276,12 @@ with main:
                       idoc.head.appendChild(styleTag);
                     }
                     styleTag.textContent = `
-                      body { margin: 0; background: transparent; }
+                      html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: transparent; }
+                      #root, .App { width: 100%; height: 100%; margin: 0; padding: 0; }
+                      .App { display: flex; }
                       button.myButton {
                         width: 100%;
+                        flex: 1;
                         min-height: 44px;
                         border-radius: 10px;
                         border: none;
