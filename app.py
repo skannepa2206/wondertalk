@@ -1365,6 +1365,10 @@ css = Template(
         width: 100% !important;
     }
 
+    div[data-testid="stMicrophoneRecorder"] iframe {
+        width: 100% !important;
+    }
+
     .mic-recorder button,
     div[data-testid="stMicrophoneRecorder"] button,
     div[data-testid="stMicrophoneRecorder"] .stButton > button {
@@ -2193,12 +2197,16 @@ with main:
         with mic_col:
             if browser_mic_ready:
                 st.markdown('<div class="mic-recorder">', unsafe_allow_html=True)
-                audio_data = mic_recorder(
+                mic_kwargs = dict(
                     start_prompt="Use Mic",
                     stop_prompt="Stop",
                     just_once=True,
                     key="browser_mic",
                 )
+                try:
+                    audio_data = mic_recorder(use_container_width=True, **mic_kwargs)
+                except TypeError:
+                    audio_data = mic_recorder(**mic_kwargs)
                 st.markdown("</div>", unsafe_allow_html=True)
                 audio_bytes = None
                 if isinstance(audio_data, dict):
@@ -2242,8 +2250,55 @@ with main:
                 }, true);
               };
 
-              bind();
-              const observer = new MutationObserver(() => bind());
+              const styleMicButton = () => {
+                const accentBg = getComputedStyle(doc.documentElement).getPropertyValue('--accent-bg') || '#111214';
+                const accentText = getComputedStyle(doc.documentElement).getPropertyValue('--accent-text') || '#ffffff';
+                const shadowStrong = getComputedStyle(doc.documentElement).getPropertyValue('--shadow-strong') || 'rgba(0,0,0,0.22)';
+                const iframes = Array.from(doc.querySelectorAll('iframe'));
+                iframes.forEach((iframe) => {
+                  try {
+                    const idoc = iframe.contentDocument;
+                    if (!idoc) return;
+                    const btn = idoc.querySelector('button.myButton');
+                    if (!btn) return;
+                    let styleTag = idoc.getElementById('mic-style-injected');
+                    if (!styleTag) {
+                      styleTag = idoc.createElement('style');
+                      styleTag.id = 'mic-style-injected';
+                      idoc.head.appendChild(styleTag);
+                    }
+                    styleTag.textContent = `
+                      body { margin: 0; background: transparent; }
+                      button.myButton {
+                        width: 100%;
+                        min-height: 44px;
+                        border-radius: 10px;
+                        border: none;
+                        background: ${accentBg.trim()};
+                        color: ${accentText.trim()};
+                        font-weight: 600;
+                        font-size: 0.95rem;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 12px 28px ${shadowStrong.trim()};
+                        cursor: pointer;
+                      }
+                      button.myButton:hover { filter: brightness(0.95); }
+                    `;
+                  } catch (e) {
+                    // iframe not ready or cross-origin
+                  }
+                });
+              };
+
+              const tick = () => {
+                bind();
+                styleMicButton();
+              };
+
+              tick();
+              const observer = new MutationObserver(() => tick());
               observer.observe(doc.body, { childList: true, subtree: true });
             })();
             </script>
