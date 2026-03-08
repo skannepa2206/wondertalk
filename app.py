@@ -1160,14 +1160,25 @@ css = Template(
     }
 
     div[data-testid="stToolbar"] a,
-    div[data-testid="stToolbar"] button,
+    div[data-testid="stToolbar"] button:not([data-testid="stExpandSidebarButton"]),
     div[data-testid="stToolbar"] svg {
         display: none !important;
     }
 
+    div[data-testid="stToolbar"] div[data-testid="stSidebarCollapseButton"] button,
+    div[data-testid="stToolbar"] div[data-testid="stSidebarCollapsedControl"] button,
+    div[data-testid="stToolbar"] button[data-testid="stExpandSidebarButton"] {
+        display: inline-flex !important;
+    }
+
+    div[data-testid="stToolbar"] div[data-testid="stSidebarCollapseButton"] svg,
+    div[data-testid="stToolbar"] div[data-testid="stSidebarCollapsedControl"] svg,
+    div[data-testid="stToolbar"] button[data-testid="stExpandSidebarButton"] svg {
+        display: inline-block !important;
+    }
+
     #MainMenu { visibility: hidden; }
     footer { visibility: hidden; }
-    header { visibility: hidden; }
 
     div[data-testid="stDecoration"] {
         display: none;
@@ -1341,18 +1352,32 @@ css = Template(
         color: var(--text) !important;
     }
 
+    .mic-recorder,
+    div[data-testid="stMicrophoneRecorder"],
+    div[data-testid="stMicrophoneRecorder"] > div {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+
+    div[data-testid="stMicrophoneRecorder"] {
+        width: 100% !important;
+    }
+
     .mic-recorder button,
     div[data-testid="stMicrophoneRecorder"] button,
     div[data-testid="stMicrophoneRecorder"] .stButton > button {
         background: var(--accent-bg) !important;
         color: var(--accent-text) !important;
         border: none !important;
-        border-radius: 16px !important;
+        border-radius: 10px !important;
         padding: 0.55rem 1.1rem !important;
         font-size: 0.95rem !important;
         box-shadow: 0 12px 28px var(--shadow-strong) !important;
         font-weight: 600 !important;
         width: 100% !important;
+        min-height: 44px !important;
     }
 
     .mic-recorder button:hover,
