@@ -10,6 +10,7 @@ import html
 import re
 from pathlib import Path
 from urllib.parse import urlparse, unquote
+import tempfile
 from string import Template
 import threading
 import logging
@@ -18,6 +19,16 @@ import speech_recognition as sr
 from dotenv import load_dotenv
 import chromadb
 import requests
+
+try:
+    import azure.cognitiveservices.speech as speechsdk
+except Exception:
+    speechsdk = None
+
+try:
+    from streamlit_mic_recorder import mic_recorder
+except Exception:
+    mic_recorder = None
 
 try:
     from pypdf import PdfReader
@@ -171,6 +182,10 @@ AZURE_OPENAI_MAX_TOKENS = _get_secret("AZURE_OPENAI_MAX_TOKENS", "400").strip()
 AZURE_OPENAI_MAX_OUTPUT_TOKENS = _get_secret("AZURE_OPENAI_MAX_OUTPUT_TOKENS", "400").strip()
 AZURE_OPENAI_RESPONSES_TEMPERATURE = _get_secret("AZURE_OPENAI_RESPONSES_TEMPERATURE", "").strip()
 
+AZURE_SPEECH_KEY = _get_secret("AZURE_SPEECH_KEY", "").strip()
+AZURE_SPEECH_REGION = _get_secret("AZURE_SPEECH_REGION", "").strip()
+AZURE_SPEECH_VOICE = _get_secret("AZURE_SPEECH_VOICE", "").strip()
+
 _PLACEHOLDER_KEYS = {
     "your_key_here",
     "your_azure_openai_key",
@@ -185,6 +200,17 @@ def using_responses_api() -> bool:
     if AZURE_OPENAI_API_MODE:
         return AZURE_OPENAI_API_MODE == "responses"
     return bool(AZURE_OPENAI_RESPONSES_URL)
+
+
+def azure_speech_ready() -> bool:
+    return bool(speechsdk and AZURE_SPEECH_KEY and AZURE_SPEECH_REGION)
+
+
+def _azure_speech_config() -> "speechsdk.SpeechConfig":
+    config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
+    if AZURE_SPEECH_VOICE:
+        config.speech_synthesis_voice_name = AZURE_SPEECH_VOICE
+    return config
 
 
 def get_active_deployment() -> str:
@@ -452,8 +478,9 @@ try:
     engine.setProperty("volume", 1.0)
     voices = engine.getProperty("voices")
 except Exception as exc:
-    TTS_AVAILABLE = False
-    log_exception("TTS init failed; voice disabled", exc)
+    log_exception("Local TTS init failed", exc)
+
+TTS_AVAILABLE = bool(engine) or azure_speech_ready()
 
 
 def _pick_friendly_voice(voice_list):
@@ -544,6 +571,8 @@ if "pending_prompt" not in st.session_state:
 
 if "last_answer" not in st.session_state:
     st.session_state.last_answer = ""
+if "last_tts_audio" not in st.session_state:
+    st.session_state.last_tts_audio = b""
 if "last_status" not in st.session_state:
     st.session_state.last_status = ""
 if "last_source" not in st.session_state:
@@ -594,7 +623,15 @@ def stop_speech():
 
 
 def start_speech(text):
-    speak_text(text)
+    if azure_speech_ready():
+        try:
+            audio_bytes = synthesize_speech_azure(text)
+            if audio_bytes:
+                st.session_state.last_tts_audio = audio_bytes
+        except Exception as exc:
+            log_exception("Azure TTS failed", exc)
+    else:
+        speak_text(text)
 
 
 # Prompt formatter
@@ -752,6 +789,47 @@ def fetch_url_text(url: str) -> str:
         tag.decompose()
     text = " ".join(soup.stripped_strings)
     return text
+
+
+def synthesize_speech_azure(text: str) -> bytes:
+    if not azure_speech_ready():
+        return b""
+    speech_config = _azure_speech_config()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as handle:
+        tmp_path = handle.name
+    audio_config = speechsdk.audio.AudioOutputConfig(filename=tmp_path)
+    synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+    result = synthesizer.speak_text_async(text).get()
+    if result.reason != speechsdk.ResultReason.SynthesizingAudioCompleted:
+        if result.reason == speechsdk.ResultReason.Canceled:
+            details = speechsdk.SpeechSynthesisCancellationDetails.from_result(result)
+            raise RuntimeError(details.error_details or "Speech synthesis canceled")
+        raise RuntimeError("Speech synthesis failed")
+    data = Path(tmp_path).read_bytes()
+    Path(tmp_path).unlink(missing_ok=True)
+    return data
+
+
+def transcribe_audio_azure(audio_bytes: bytes) -> str:
+    if not azure_speech_ready():
+        return ""
+    speech_config = _azure_speech_config()
+    speech_config.speech_recognition_language = "en-US"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as handle:
+        handle.write(audio_bytes)
+        tmp_path = handle.name
+    audio_config = speechsdk.audio.AudioConfig(filename=tmp_path)
+    recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+    result = recognizer.recognize_once_async().get()
+    Path(tmp_path).unlink(missing_ok=True)
+    if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+        return result.text
+    if result.reason == speechsdk.ResultReason.NoMatch:
+        return ""
+    if result.reason == speechsdk.ResultReason.Canceled:
+        details = speechsdk.CancellationDetails.from_result(result)
+        raise RuntimeError(details.error_details or "Speech recognition canceled")
+    return ""
 
 
 def build_source_fingerprint(urls: list, file_labels: list) -> str:
@@ -1317,6 +1395,17 @@ css = Template(
 
     .stButton > button:hover * {
         color: var(--accent-text) !important;
+    }
+
+    .stButton > button:disabled {
+        color: var(--muted) !important;
+        border-color: var(--border) !important;
+        background: transparent !important;
+        opacity: 1 !important;
+    }
+
+    .stButton > button:disabled * {
+        color: var(--muted) !important;
     }
 
     button[kind="primary"] {
@@ -1991,7 +2080,8 @@ with main:
         with spacer_col:
             st.markdown("", unsafe_allow_html=True)
 
-        mic_ready = mic_available()
+        browser_mic_ready = azure_speech_ready() and mic_recorder is not None
+        mic_ready = mic_available() or browser_mic_ready
         if st.session_state.clear_prompt:
             st.session_state.prompt = ""
             st.session_state.clear_prompt = False
@@ -2009,8 +2099,33 @@ with main:
                 placeholder="Ask anything...",
             )
         with mic_col:
-            if st.button("Use Mic", use_container_width=True, disabled=not mic_ready):
-                recognize_speech()
+            if browser_mic_ready:
+                audio_data = mic_recorder(
+                    start_prompt="Use Mic",
+                    stop_prompt="Stop",
+                    just_once=True,
+                    key="browser_mic",
+                )
+                audio_bytes = None
+                if isinstance(audio_data, dict):
+                    audio_bytes = audio_data.get("bytes") or audio_data.get("audio")
+                elif isinstance(audio_data, (bytes, bytearray)):
+                    audio_bytes = audio_data
+                if audio_bytes:
+                    try:
+                        transcript = transcribe_audio_azure(audio_bytes)
+                        if transcript:
+                            st.session_state.pending_prompt = transcript
+                            st.success(f"You said: {transcript}")
+                            st.rerun()
+                        else:
+                            st.warning("Could not understand audio.")
+                    except Exception as exc:
+                        log_exception("Azure speech recognition failed", exc)
+                        st.error(f"Speech recognition failed: {exc}")
+            else:
+                if st.button("Use Mic", use_container_width=True, disabled=not mic_ready):
+                    recognize_speech()
         with send_col:
             send_clicked = st.button("Send", type="primary", use_container_width=True)
 
@@ -2043,7 +2158,7 @@ with main:
         )
 
         if not mic_ready:
-            st.caption("Microphone disabled (PyAudio not installed).")
+            st.caption("Microphone disabled (enable Azure Speech for browser mic or install PyAudio).")
         if not TTS_AVAILABLE:
             st.caption("Voice output disabled on this host.")
 
@@ -2101,6 +2216,7 @@ with main:
                     st.session_state.last_answer = answer
                     st.session_state.last_status = status
                     st.session_state.last_source = source
+                    st.session_state.last_tts_audio = b""
                     add_message("assistant", answer, status=status, source=source)
 
                 st.rerun()
@@ -2115,3 +2231,6 @@ with main:
                     start_speech(st.session_state.last_answer)
                 else:
                     st.warning("No answer to speak yet.")
+
+        if st.session_state.last_tts_audio:
+            st.audio(st.session_state.last_tts_audio, format="audio/wav")
