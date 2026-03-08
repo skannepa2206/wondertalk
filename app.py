@@ -1352,43 +1352,63 @@ css = Template(
         color: var(--text) !important;
     }
 
-    .mic-recorder,
-    div[data-testid="stMicrophoneRecorder"],
-    div[data-testid="stMicrophoneRecorder"] > div {
+    .mic-mini,
+    .mic-mini div[data-testid="stMicrophoneRecorder"],
+    .mic-mini div[data-testid="stMicrophoneRecorder"] > div {
         background: transparent !important;
         border: none !important;
         padding: 0 !important;
         box-shadow: none !important;
     }
 
-    div[data-testid="stMicrophoneRecorder"] {
-        width: 100% !important;
+    .mic-mini {
+        width: 44px !important;
+        min-width: 44px !important;
+        height: 44px !important;
         display: flex;
-        align-items: stretch;
+        align-items: center;
+        justify-content: center;
     }
 
-    div[data-testid="stMicrophoneRecorder"] iframe {
-        width: 100% !important;
+    .mic-mini div[data-testid="stMicrophoneRecorder"] {
+        width: 44px !important;
+        min-width: 44px !important;
+        height: 44px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    .mic-recorder button,
-    div[data-testid="stMicrophoneRecorder"] button,
-    div[data-testid="stMicrophoneRecorder"] .stButton > button {
+    .mic-mini div[data-testid="stMicrophoneRecorder"] iframe {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+    .mic-mini button,
+    .mic-mini .stButton > button,
+    .mic-mini div[data-testid="stMicrophoneRecorder"] button,
+    .mic-mini div[data-testid="stMicrophoneRecorder"] .stButton > button {
         background: var(--accent-bg) !important;
         color: var(--accent-text) !important;
         border: none !important;
-        border-radius: 10px !important;
-        padding: 0.55rem 1.1rem !important;
-        font-size: 0.95rem !important;
+        border-radius: 999px !important;
+        padding: 0 !important;
+        font-size: 1.1rem !important;
+        line-height: 1 !important;
         box-shadow: 0 12px 28px var(--shadow-strong) !important;
         font-weight: 600 !important;
-        width: 100% !important;
+        width: 44px !important;
+        height: 44px !important;
         min-height: 44px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
-    .mic-recorder button:hover,
-    div[data-testid="stMicrophoneRecorder"] button:hover,
-    div[data-testid="stMicrophoneRecorder"] .stButton > button:hover {
+    .mic-mini button:hover,
+    .mic-mini .stButton > button:hover,
+    .mic-mini div[data-testid="stMicrophoneRecorder"] button:hover,
+    .mic-mini div[data-testid="stMicrophoneRecorder"] .stButton > button:hover {
         filter: brightness(0.95) !important;
     }
 
@@ -2193,7 +2213,7 @@ with main:
             st.session_state.prompt = st.session_state.pending_prompt
             st.session_state.pending_prompt = ""
 
-        input_col, send_col = st.columns([7.5, 2.5])
+        input_col, mic_col, send_col = st.columns([7.2, 0.8, 2.0])
         with input_col:
             st.text_area(
                 "Your question",
@@ -2202,24 +2222,19 @@ with main:
                 label_visibility="collapsed",
                 placeholder="Ask anything...",
             )
-        with send_col:
-            send_clicked = st.button("Send", type="primary", use_container_width=True)
-
-        mic_row = st.columns([7.5, 2.5])
-        with mic_row[0]:
+        with mic_col:
+            st.markdown('<div class="mic-mini">', unsafe_allow_html=True)
             if browser_mic_ready:
-                st.markdown('<div class="mic-recorder">', unsafe_allow_html=True)
                 mic_kwargs = dict(
-                    start_prompt="Use Mic",
-                    stop_prompt="Stop",
+                    start_prompt="🎤",
+                    stop_prompt="⏹",
                     just_once=True,
                     key="browser_mic",
                 )
                 try:
-                    audio_data = mic_recorder(use_container_width=True, **mic_kwargs)
+                    audio_data = mic_recorder(**mic_kwargs)
                 except TypeError:
                     audio_data = mic_recorder(**mic_kwargs)
-                st.markdown("</div>", unsafe_allow_html=True)
                 audio_bytes = None
                 if isinstance(audio_data, dict):
                     audio_bytes = audio_data.get("bytes") or audio_data.get("audio")
@@ -2238,10 +2253,11 @@ with main:
                         log_exception("Azure speech recognition failed", exc)
                         st.error(f"Speech recognition failed: {exc}")
             else:
-                if st.button("Use Mic", use_container_width=True, disabled=not mic_ready):
+                if st.button("🎤", use_container_width=True, disabled=not mic_ready):
                     recognize_speech()
-        with mic_row[1]:
-            st.markdown("", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        with send_col:
+            send_clicked = st.button("Send", type="primary", use_container_width=True)
 
         components.html(
             """
@@ -2282,17 +2298,19 @@ with main:
                     styleTag.textContent = `
                       html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: transparent; }
                       #root, .App { width: 100%; height: 100%; margin: 0; padding: 0; }
-                      .App { display: flex; }
+                      .App { display: flex; align-items: center; justify-content: center; }
                       button.myButton {
-                        width: 100%;
-                        flex: 1;
+                        width: 44px;
+                        height: 44px;
+                        min-width: 44px;
                         min-height: 44px;
-                        border-radius: 10px;
+                        border-radius: 999px;
                         border: none;
                         background: ${accentBg.trim()};
                         color: ${accentText.trim()};
                         font-weight: 600;
-                        font-size: 0.95rem;
+                        font-size: 1.1rem;
+                        line-height: 1;
                         display: inline-flex;
                         align-items: center;
                         justify-content: center;
