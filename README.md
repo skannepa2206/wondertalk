@@ -1,6 +1,24 @@
 # WonderTalk (Group 2) - Azure OpenAI Edition
 
-This Streamlit app answers kids' questions with a friendly tone, supports microphone input, and reads responses aloud.
+WonderTalk is a kid-friendly AI learning companion built with Streamlit and Azure OpenAI. It supports voice input, read-aloud responses, curated knowledge sources, and multiple model deployments.
+
+## What the app offers
+- Kid-friendly chat with story, homework, and exploration modes
+- Multi-model selector (gpt-5.2-chat, gpt-4.1-mini, gpt-35-turbo, o4-mini, etc.)
+- Voice input + speech output (start/stop narration on demand)
+- Curated sources: upload textbooks/notes (PDF/TXT/MD) and approved websites
+- Web MCP mode: optionally fetch only the listed URLs
+- Context memory: recent messages kept for continuity
+- Persistent cache (ChromaDB) for faster repeated answers
+- Theme toggle (Light/Dark) and polished UI
+
+## Tech stack
+- Frontend/App: Streamlit
+- LLM: Azure OpenAI (Responses API / Chat Completions)
+- Vector store: ChromaDB
+- Speech: SpeechRecognition + PyAudio (mic), pyttsx3 (TTS)
+- Parsing: PyPDF + BeautifulSoup
+- Infra: Python 3.9-3.11
 
 ## Folder
 Use the files in `Working_Code`.
@@ -46,27 +64,6 @@ Optional microphone support (Windows):
 ## One-command start
 - Windows: run `start.ps1`
 - macOS/Linux: run `start.sh`
-
-## Deploy to Streamlit Community Cloud
-1. Push this repo to GitHub.
-2. In Streamlit Community Cloud, click **Create app** and select the repo/branch.
-3. Set the entrypoint to `app.py`.
-4. Add your secrets in **Advanced settings** (same keys as `.env`).
-
-Example secrets:
-```
-AZURE_OPENAI_API_KEY="YOUR_AZURE_OPENAI_API_KEY_HERE"
-AZURE_OPENAI_API_VERSION="2025-04-01-preview"
-AZURE_OPENAI_API_MODE="responses"
-AZURE_OPENAI_RESPONSES_URL="https://<resource>.cognitiveservices.azure.com/openai/responses?api-version=2025-04-01-preview"
-AZURE_OPENAI_ENDPOINT="https://<resource>.openai.azure.com"
-AZURE_OPENAI_BASE_URL="https://<resource>.openai.azure.com/openai/v1"
-AZURE_OPENAI_DEPLOYMENT="gpt-5.2-chat"
-AZURE_OPENAI_DEPLOYMENT_NAME_MAP="gpt-5.2-chat=gpt-5.2-chat,gpt-4.1-mini=gpt-4.1-mini"
-AZURE_OPENAI_DEPLOYMENT_URL_MAP="gpt-4.1-mini=https://<resource>.cognitiveservices.azure.com/openai/deployments/gpt-4.1-mini/chat/completions?api-version=2025-01-01-preview"
-```
-
-Note: Streamlit Cloud doesn’t support local microphone drivers, so `Use Mic` may be disabled there.
 
 ## Notes
 - If Azure OpenAI is not configured, the app falls back to Wikipedia summaries.
