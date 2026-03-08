@@ -1322,26 +1322,20 @@ css = Template(
     .mic-recorder button,
     div[data-testid="stMicrophoneRecorder"] button,
     div[data-testid="stMicrophoneRecorder"] .stButton > button {
-        background: transparent !important;
-        color: var(--text) !important;
-        border: 1px solid var(--border-strong) !important;
-        border-radius: 12px !important;
+        background: var(--accent-bg) !important;
+        color: var(--accent-text) !important;
+        border: none !important;
+        border-radius: 16px !important;
         padding: 0.55rem 1.1rem !important;
         font-size: 0.95rem !important;
-        box-shadow: none !important;
+        box-shadow: 0 12px 28px var(--shadow-strong) !important;
+        font-weight: 600 !important;
     }
 
     .mic-recorder button:hover,
     div[data-testid="stMicrophoneRecorder"] button:hover,
     div[data-testid="stMicrophoneRecorder"] .stButton > button:hover {
-        background: var(--accent-bg) !important;
-        color: var(--accent-text) !important;
-        border-color: var(--accent-bg) !important;
-    }
-
-    .mic-recorder button:hover *,
-    div[data-testid="stMicrophoneRecorder"] button:hover * {
-        color: var(--accent-text) !important;
+        filter: brightness(0.95) !important;
     }
 
     .stRadio [role="radiogroup"] label,
@@ -2089,7 +2083,7 @@ with main:
 
         suggestions = [
             "Tell me a short story about space.",
-            "Explain photosynthesis simply.",
+            "Explain photosynthesis in simple terms.",
             "Help me make a study plan.",
         ]
         suggestion_cols = st.columns(3)
