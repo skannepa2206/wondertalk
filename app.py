@@ -573,6 +573,10 @@ if "last_answer" not in st.session_state:
     st.session_state.last_answer = ""
 if "last_tts_audio" not in st.session_state:
     st.session_state.last_tts_audio = b""
+if "auto_play_audio" not in st.session_state:
+    st.session_state.auto_play_audio = False
+if "stop_audio" not in st.session_state:
+    st.session_state.stop_audio = False
 if "last_status" not in st.session_state:
     st.session_state.last_status = ""
 if "last_source" not in st.session_state:
@@ -628,6 +632,7 @@ def start_speech(text):
             audio_bytes = synthesize_speech_azure(text)
             if audio_bytes:
                 st.session_state.last_tts_audio = audio_bytes
+                st.session_state.auto_play_audio = True
         except Exception as exc:
             log_exception("Azure TTS failed", exc)
     else:
@@ -1314,6 +1319,31 @@ css = Template(
         color: var(--text) !important;
     }
 
+    .mic-recorder button,
+    div[data-testid="stMicrophoneRecorder"] button,
+    div[data-testid="stMicrophoneRecorder"] .stButton > button {
+        background: transparent !important;
+        color: var(--text) !important;
+        border: 1px solid var(--border-strong) !important;
+        border-radius: 12px !important;
+        padding: 0.55rem 1.1rem !important;
+        font-size: 0.95rem !important;
+        box-shadow: none !important;
+    }
+
+    .mic-recorder button:hover,
+    div[data-testid="stMicrophoneRecorder"] button:hover,
+    div[data-testid="stMicrophoneRecorder"] .stButton > button:hover {
+        background: var(--accent-bg) !important;
+        color: var(--accent-text) !important;
+        border-color: var(--accent-bg) !important;
+    }
+
+    .mic-recorder button:hover *,
+    div[data-testid="stMicrophoneRecorder"] button:hover * {
+        color: var(--accent-text) !important;
+    }
+
     .stRadio [role="radiogroup"] label,
     .stRadio [role="radiogroup"] label span,
     .stRadio [role="radiogroup"] label div,
@@ -1324,6 +1354,24 @@ css = Template(
 
     .stRadio input[type="radio"] {
         accent-color: var(--accent-bg);
+    }
+
+    @media (max-width: 768px) {
+        .composer-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.35rem;
+        }
+        .composer-meta {
+            font-size: 0.75rem;
+        }
+        div[data-testid="stAudio"] audio {
+            width: 100%;
+        }
+        .stButton > button {
+            padding: 0.5rem 0.9rem;
+            font-size: 0.9rem;
+        }
     }
 
     .stRadio [role="radiogroup"] {
@@ -2225,6 +2273,7 @@ with main:
         with voice_col1:
             if st.button("Stop Voice", use_container_width=True, disabled=not TTS_AVAILABLE):
                 stop_speech()
+                st.session_state.stop_audio = True
         with voice_col2:
             if st.button("Start Voice", use_container_width=True, disabled=not TTS_AVAILABLE):
                 if st.session_state.last_answer.strip():
@@ -2234,3 +2283,36 @@ with main:
 
         if st.session_state.last_tts_audio:
             st.audio(st.session_state.last_tts_audio, format="audio/wav")
+        if st.session_state.auto_play_audio:
+            components.html(
+                """
+                <script>
+                (function() {
+                  const doc = window.parent.document;
+                  const audios = doc.querySelectorAll('audio');
+                  if (!audios.length) return;
+                  const audio = audios[audios.length - 1];
+                  audio.play().catch(() => {});
+                })();
+                </script>
+                """,
+                height=0,
+            )
+            st.session_state.auto_play_audio = False
+        if st.session_state.stop_audio:
+            components.html(
+                """
+                <script>
+                (function() {
+                  const doc = window.parent.document;
+                  const audios = doc.querySelectorAll('audio');
+                  audios.forEach((audio) => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                  });
+                })();
+                </script>
+                """,
+                height=0,
+            )
+            st.session_state.stop_audio = False
