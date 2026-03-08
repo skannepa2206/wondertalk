@@ -1,0 +1,11 @@
+streamlit
+python-dotenv
+chromadb
+pyttsx3
+SpeechRecognition
+wikipedia
+requests
+beautifulsoup4
+pypdf
+# Optional mic support (Windows)
+pyaudio; platform_system == "Windows"
