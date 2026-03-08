@@ -1159,6 +1159,16 @@ css = Template(
         box-shadow: none;
     }
 
+    div[data-testid="stToolbar"] a,
+    div[data-testid="stToolbar"] button,
+    div[data-testid="stToolbar"] svg {
+        display: none !important;
+    }
+
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    header { visibility: hidden; }
+
     div[data-testid="stDecoration"] {
         display: none;
     }
@@ -1180,6 +1190,18 @@ css = Template(
     .hero {
         text-align: center;
         margin: 0 0 0.8rem 0;
+    }
+
+    .hero-cta .stButton > button {
+        border-radius: 999px;
+        padding: 0.65rem 1.1rem;
+        font-size: 0.95rem;
+        white-space: nowrap;
+    }
+
+    .hero-cta .stButton > button div {
+        display: inline-block;
+        white-space: nowrap;
     }
 
     .hero-title {
@@ -1330,6 +1352,7 @@ css = Template(
         font-size: 0.95rem !important;
         box-shadow: 0 12px 28px var(--shadow-strong) !important;
         font-weight: 600 !important;
+        width: 100% !important;
     }
 
     .mic-recorder button:hover,
@@ -2089,8 +2112,10 @@ with main:
         suggestion_cols = st.columns(3)
         for idx, (col, text) in enumerate(zip(suggestion_cols, suggestions)):
             with col:
+                st.markdown('<div class="hero-cta">', unsafe_allow_html=True)
                 if st.button(text, key=f"hero_suggest_{idx}", use_container_width=True):
                     st.session_state.pending_prompt = text
+                st.markdown("</div>", unsafe_allow_html=True)
 
     chat_block = st.container()
     with chat_block:
@@ -2142,12 +2167,14 @@ with main:
             )
         with mic_col:
             if browser_mic_ready:
+                st.markdown('<div class="mic-recorder">', unsafe_allow_html=True)
                 audio_data = mic_recorder(
                     start_prompt="Use Mic",
                     stop_prompt="Stop",
                     just_once=True,
                     key="browser_mic",
                 )
+                st.markdown("</div>", unsafe_allow_html=True)
                 audio_bytes = None
                 if isinstance(audio_data, dict):
                     audio_bytes = audio_data.get("bytes") or audio_data.get("audio")
