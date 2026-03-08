@@ -1,6 +1,6 @@
 streamlit
 python-dotenv
-chromadb
+chromadb==0.4.24
 pyttsx3
 SpeechRecognition
 wikipedia
