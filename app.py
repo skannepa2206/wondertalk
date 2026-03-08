@@ -2204,8 +2204,6 @@ with main:
         with spacer_col:
             st.markdown("", unsafe_allow_html=True)
 
-        browser_mic_ready = azure_speech_ready() and mic_recorder is not None
-        mic_ready = mic_available() or browser_mic_ready
         if st.session_state.clear_prompt:
             st.session_state.prompt = ""
             st.session_state.clear_prompt = False
@@ -2213,7 +2211,7 @@ with main:
             st.session_state.prompt = st.session_state.pending_prompt
             st.session_state.pending_prompt = ""
 
-        input_col, mic_col, send_col = st.columns([7.2, 0.8, 2.0])
+        input_col, send_col = st.columns([7.5, 2.5])
         with input_col:
             st.text_area(
                 "Your question",
@@ -2222,40 +2220,6 @@ with main:
                 label_visibility="collapsed",
                 placeholder="Ask anything...",
             )
-        with mic_col:
-            st.markdown('<div class="mic-mini">', unsafe_allow_html=True)
-            if browser_mic_ready:
-                mic_kwargs = dict(
-                    start_prompt="🎤",
-                    stop_prompt="⏹",
-                    just_once=True,
-                    key="browser_mic",
-                )
-                try:
-                    audio_data = mic_recorder(**mic_kwargs)
-                except TypeError:
-                    audio_data = mic_recorder(**mic_kwargs)
-                audio_bytes = None
-                if isinstance(audio_data, dict):
-                    audio_bytes = audio_data.get("bytes") or audio_data.get("audio")
-                elif isinstance(audio_data, (bytes, bytearray)):
-                    audio_bytes = audio_data
-                if audio_bytes:
-                    try:
-                        transcript = transcribe_audio_azure(audio_bytes)
-                        if transcript:
-                            st.session_state.pending_prompt = transcript
-                            st.success(f"You said: {transcript}")
-                            st.rerun()
-                        else:
-                            st.warning("Could not understand audio.")
-                    except Exception as exc:
-                        log_exception("Azure speech recognition failed", exc)
-                        st.error(f"Speech recognition failed: {exc}")
-            else:
-                if st.button("🎤", use_container_width=True, disabled=not mic_ready):
-                    recognize_speech()
-            st.markdown("</div>", unsafe_allow_html=True)
         with send_col:
             send_clicked = st.button("Send", type="primary", use_container_width=True)
 
@@ -2278,60 +2242,8 @@ with main:
                 }, true);
               };
 
-              const styleMicButton = () => {
-                const accentBg = getComputedStyle(doc.documentElement).getPropertyValue('--accent-bg') || '#111214';
-                const accentText = getComputedStyle(doc.documentElement).getPropertyValue('--accent-text') || '#ffffff';
-                const shadowStrong = getComputedStyle(doc.documentElement).getPropertyValue('--shadow-strong') || 'rgba(0,0,0,0.22)';
-                const iframes = Array.from(doc.querySelectorAll('iframe'));
-                iframes.forEach((iframe) => {
-                  try {
-                    const idoc = iframe.contentDocument;
-                    if (!idoc) return;
-                    const btn = idoc.querySelector('button.myButton');
-                    if (!btn) return;
-                    let styleTag = idoc.getElementById('mic-style-injected');
-                    if (!styleTag) {
-                      styleTag = idoc.createElement('style');
-                      styleTag.id = 'mic-style-injected';
-                      idoc.head.appendChild(styleTag);
-                    }
-                    styleTag.textContent = `
-                      html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: transparent; }
-                      #root, .App { width: 100%; height: 100%; margin: 0; padding: 0; }
-                      .App { display: flex; align-items: center; justify-content: center; }
-                      button.myButton {
-                        width: 44px;
-                        height: 44px;
-                        min-width: 44px;
-                        min-height: 44px;
-                        border-radius: 999px;
-                        border: none;
-                        background: ${accentBg.trim()};
-                        color: ${accentText.trim()};
-                        font-weight: 600;
-                        font-size: 1.1rem;
-                        line-height: 1;
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        box-shadow: 0 12px 28px ${shadowStrong.trim()};
-                        cursor: pointer;
-                      }
-                      button.myButton:hover { filter: brightness(0.95); }
-                    `;
-                  } catch (e) {
-                    // iframe not ready or cross-origin
-                  }
-                });
-              };
-
-              const tick = () => {
-                bind();
-                styleMicButton();
-              };
-
-              tick();
-              const observer = new MutationObserver(() => tick());
+              bind();
+              const observer = new MutationObserver(() => bind());
               observer.observe(doc.body, { childList: true, subtree: true });
             })();
             </script>
@@ -2339,8 +2251,6 @@ with main:
             height=0,
         )
 
-        if not mic_ready:
-            st.caption("Microphone disabled (enable Azure Speech for browser mic or install PyAudio).")
         if not TTS_AVAILABLE:
             st.caption("Voice output disabled on this host.")
 
