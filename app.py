@@ -379,16 +379,81 @@ def call_azure_openai(prompt_text: str) -> str:
         return call_azure_responses(prompt_text)
     return call_azure_chat(prompt_text)
 
-# ChromaDB setup (persistent cache)
-chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
-collection = chroma_client.get_or_create_collection(name="prompt_store")
-source_collection = chroma_client.get_or_create_collection(name="source_store")
+# ChromaDB setup (persistent cache with safe fallback for Streamlit Cloud)
+class _InMemoryCacheCollection:
+    def __init__(self):
+        self._store = {}
+
+    def query(self, query_texts=None, n_results=1):
+        key = (query_texts or [""])[0]
+        if key in self._store:
+            return {
+                "documents": [[key]],
+                "distances": [[0.0]],
+                "metadatas": [[{"answer": self._store[key]}]],
+            }
+        return {"documents": [[]], "distances": [[]], "metadatas": [[]]}
+
+    def add(self, documents=None, metadatas=None, ids=None):
+        for doc, meta in zip(documents or [], metadatas or []):
+            if isinstance(meta, dict) and "answer" in meta:
+                self._store[doc] = meta["answer"]
+
+
+class _InMemorySourceCollection:
+    def __init__(self):
+        self._entries = []
+
+    def add(self, documents=None, metadatas=None, ids=None):
+        for doc, meta, item_id in zip(documents or [], metadatas or [], ids or []):
+            self._entries.append({"id": item_id, "doc": doc, "meta": meta or {}})
+
+    def delete(self, ids=None):
+        if not ids:
+            return
+        id_set = set(ids)
+        self._entries = [e for e in self._entries if e["id"] not in id_set]
+
+    def query(self, query_texts=None, n_results=3):
+        query = (query_texts or [""])[0].lower()
+        tokens = set(re.findall(r"\w+", query))
+        scored = []
+        for entry in self._entries:
+            text = str(entry["doc"]).lower()
+            score = sum(1 for token in tokens if token in text)
+            if score > 0:
+                scored.append((score, entry))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top = [e for _, e in scored[:n_results]]
+        return {
+            "documents": [[e["doc"] for e in top]],
+            "metadatas": [[e["meta"] for e in top]],
+        }
+
+
+try:
+    chroma_client = chromadb.PersistentClient(
+        path=CHROMA_DIR, tenant="default_tenant", database="default_database"
+    )
+    collection = chroma_client.get_or_create_collection(name="prompt_store")
+    source_collection = chroma_client.get_or_create_collection(name="source_store")
+except Exception as exc:
+    log_exception("ChromaDB init failed; using in-memory cache", exc)
+    collection = _InMemoryCacheCollection()
+    source_collection = _InMemorySourceCollection()
 
 # TTS setup
-engine = pyttsx3.init()
-engine.setProperty("rate", 165)
-engine.setProperty("volume", 1.0)
-voices = engine.getProperty("voices")
+TTS_AVAILABLE = True
+engine = None
+voices = []
+try:
+    engine = pyttsx3.init()
+    engine.setProperty("rate", 165)
+    engine.setProperty("volume", 1.0)
+    voices = engine.getProperty("voices")
+except Exception as exc:
+    TTS_AVAILABLE = False
+    log_exception("TTS init failed; voice disabled", exc)
 
 
 def _pick_friendly_voice(voice_list):
@@ -491,6 +556,8 @@ speech_thread = None
 
 def speak_text(text):
     global speech_thread
+    if not TTS_AVAILABLE or engine is None:
+        return
     stop_speech_flag.clear()
     speech_text = sanitize_tts_text(text)
 
@@ -516,6 +583,8 @@ def speak_text(text):
 
 
 def stop_speech():
+    if not TTS_AVAILABLE or engine is None:
+        return
     stop_speech_flag.set()
     try:
         engine.stop()
@@ -1975,6 +2044,8 @@ with main:
 
         if not mic_ready:
             st.caption("Microphone disabled (PyAudio not installed).")
+        if not TTS_AVAILABLE:
+            st.caption("Voice output disabled on this host.")
 
         if send_clicked:
             prompt = st.session_state.prompt.strip()
@@ -2036,10 +2107,10 @@ with main:
 
         voice_col1, voice_col2 = st.columns(2)
         with voice_col1:
-            if st.button("Stop Voice", use_container_width=True):
+            if st.button("Stop Voice", use_container_width=True, disabled=not TTS_AVAILABLE):
                 stop_speech()
         with voice_col2:
-            if st.button("Start Voice", use_container_width=True):
+            if st.button("Start Voice", use_container_width=True, disabled=not TTS_AVAILABLE):
                 if st.session_state.last_answer.strip():
                     start_speech(st.session_state.last_answer)
                 else:
