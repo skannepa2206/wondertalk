@@ -1076,6 +1076,18 @@ css = Template(
         -webkit-font-feature-settings: 'liga';
         -webkit-font-smoothing: antialiased;
     }
+    span[data-testid="stIconMaterial"] {
+        font-family: "Material Icons", "Material Symbols Outlined", sans-serif !important;
+        font-size: 22px !important;
+        line-height: 1 !important;
+        letter-spacing: normal !important;
+        text-transform: none !important;
+        display: inline-block !important;
+        white-space: nowrap !important;
+        direction: ltr !important;
+        -webkit-font-feature-settings: "liga" !important;
+        -webkit-font-smoothing: antialiased !important;
+    }
 
     div[data-testid="stSidebarCollapseButton"] button,
     div[data-testid="stSidebarCollapsedControl"] button {
