@@ -1457,42 +1457,59 @@ css = Template(
     }
 
     section[data-testid="stSidebar"] div[data-testid="stFileUploader"] > div {
-        background: var(--panel-2);
-        border: 1px solid var(--border-strong);
-        border-radius: 14px;
-        padding: 0.6rem;
-    }
+    background: var(--panel-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 0.6rem;
+}
 
-    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {
-        background: transparent;
-        border: none;
-        color: var(--text);
-    }
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.5rem 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.45rem !important;
+}
 
-    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] small,
-    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] span,
-    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] label {
-        color: var(--muted) !important;
-    }
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] {
+    display: none !important;
+}
 
-    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button {
-        background: transparent;
-        color: var(--text);
-        border: 1px solid var(--border-strong);
-        border-radius: 12px;
-        padding: 0.45rem 0.7rem;
-        font-size: 0.9rem;
-    }
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button {
+    background: transparent !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 12px !important;
+    padding: 0.45rem 0.9rem !important;
+    min-height: 38px !important;
+    width: auto !important;
+    font-size: 0.9rem !important;
+    line-height: 1.2 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+}
 
-    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button:hover {
-        background: var(--accent-bg);
-        color: var(--accent-text);
-        border-color: var(--accent-bg);
-    }
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button * {
+    color: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+}
 
-    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button:hover * {
-        color: var(--accent-text) !important;
-    }
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] small {
+    color: var(--muted) !important;
+    font-size: 0.78rem !important;
+    line-height: 1.3 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button:hover {
+    background: var(--accent-bg) !important;
+    color: var(--accent-text) !important;
+    border-color: var(--accent-bg) !important;
+}
 
     .stButton > button {
         background: transparent;
